@@ -7,19 +7,83 @@ byte-for-byte.
 
 ## Hardware
 
-- A 433 MHz OOK transmitter (e.g. SYN115, FS1000A) wired to any GPIO.
-- *(Optional)* A 433 MHz OOK receiver (e.g. SYN480R) wired to an
-  interrupt-capable GPIO. Skip this if you only want to transmit.
+You need a **433 MHz OOK transmitter** (e.g. SYN115, FS1000A). If you
+also want to capture your OEM remote's codes, add a matching
+**433 MHz OOK receiver** (e.g. SYN480R). Both are cheap on Amazon /
+AliExpress.
 
-```
-MCU GPIO ──► TX module DATA          (transmit)
-MCU GPIO ◄── RX module DATA          (receive)
-```
+Wiring is the same on any board — only the pin names change:
+
+| Signal              | ESP8266 NodeMCU | Arduino Uno | Notes                          |
+|---------------------|-----------------|-------------|--------------------------------|
+| TX module **DATA**  | D1 (GPIO5)      | Pin 10      | any GPIO                       |
+| RX module **DATA**  | D2 (GPIO4)      | Pin 2       | **must be interrupt-capable**  |
+| TX/RX **VCC**       | VU (5V) or 3V3  | 5V          | TX range improves at 5V        |
+| TX/RX **GND**       | GND             | GND         |                                |
+| TX module antenna   | —               | —           | **solder a 17.3 cm wire**      |
+
+A few gotchas the modules don't tell you:
+
+- **The TX module is useless without an antenna.** Solder a 17.3 cm
+  (¼-wavelength of 433 MHz) wire to the ANT pad. Without it you'll
+  get maybe 10 cm of range and waste hours blaming software.
+- **The RX module wants 5V** for best sensitivity. The data pin is
+  ~5V logic but the SYN480R will work into a 3.3V MCU input on a
+  short bus. If you see garbage, use a divider or a 3.3V receiver.
+- **Interrupt-capable RX pin.** On AVR Uno that's pin 2 or 3
+  (`INT0`/`INT1`). On ESP8266/ESP32 every GPIO except the strapping
+  pins is fine.
+
+On AVR, the only relevant in-band ISR (Timer0, ~1 µs) is well inside
+the library's ±45 µs tolerance, so you can leave `millis()`
+interrupts enabled. On ESP8266/ESP32, see `disableInterruptsDuringTx`
+in `HunterFan.h` if you need to suppress WiFi jitter during transmits.
 
 ## Install
 
-Drop this directory into your Arduino `libraries/` folder, or symlink it.
-PlatformIO users can add it to `lib_deps` as a Git URL.
+**Arduino IDE.** Clone this repo (or download the ZIP) into your
+sketchbook's `libraries/` folder:
+
+- Linux: `~/Arduino/libraries/HunterFan`
+- macOS: `~/Documents/Arduino/libraries/HunterFan`
+- Windows: `Documents\Arduino\libraries\HunterFan`
+
+Restart the IDE; the examples will appear under
+**File → Examples → HunterFan**.
+
+**PlatformIO.** Add to `platformio.ini`:
+
+```ini
+lib_deps =
+    https://github.com/breandan/HunterFan.git
+```
+
+## Capture your remote's codes
+
+The codes in the examples are paired to *my* fan — they won't do
+anything to yours. The first thing you'll want to do is capture your
+own remote's buttons:
+
+1. Wire up a 433 MHz receiver as in the table above.
+2. Flash `examples/ESP8266_RX` (or `Uno_RX`).
+3. Open the serial monitor at 115200 baud.
+4. Point the OEM remote at the receiver and press a button.
+5. The sketch prints something like:
+   ```
+   #1  RX 66b  A6FF346CBB18067F80
+   ```
+6. Note the bit count (often 65 or 66 — varies by remote model) and
+   the hex string. That's the complete packet for that button. Repeat
+   for every button you want to control.
+
+To replay, paste the hex into a TX sketch and call:
+
+```cpp
+fan.sendHex("A6FF346CBB18067F80", 66);
+```
+
+That's the whole workflow — the library doesn't need to know what
+each button means, it just transmits exactly what it received.
 
 ## Quick start — transmit
 
@@ -79,7 +143,7 @@ similar OOK remotes. See `HunterFan.h`.
 
 ## Examples
 
-- `examples/HunterFanBasic` — minimal TX example.
+- `examples/HunterFanBasic` — combined TX+RX example, builds on ESP8266 or Uno.
 - `examples/ESP8266_TX`, `examples/ESP8266_RX` — ESP8266 sender/receiver.
 - `examples/Uno_TX`, `examples/Uno_RX` — same on an Arduino Uno.
 
