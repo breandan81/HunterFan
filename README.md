@@ -7,10 +7,17 @@ byte-for-byte.
 
 ## Hardware
 
-You need a **433 MHz OOK transmitter** (e.g. SYN115, FS1000A). If you
-also want to capture your OEM remote's codes, add a matching
-**433 MHz OOK receiver** (e.g. SYN480R). Both are cheap on Amazon /
-AliExpress.
+You need a **433 MHz OOK transmitter**, and — if you want to capture
+your OEM remote's codes — a matching **433 MHz OOK receiver**. The
+two common families on Amazon / AliExpress are:
+
+| Family                         | TX        | RX                  | Supply |
+|--------------------------------|-----------|---------------------|--------|
+| SYN-series (small SMD modules) | SYN115    | SYN480R             | 3.3 V  |
+| Classic "FS1000A / MX-RM-5V"   | FS1000A   | MX-RM-5V / XY-MK-5V | 5 V    |
+
+**Pick a family and stick with it** — don't mix supplies, and don't
+feed 5 V into a SYN115 (you'll let the magic smoke out).
 
 Wiring is the same on any board — only the pin names change:
 
@@ -18,8 +25,8 @@ Wiring is the same on any board — only the pin names change:
 |---------------------|-----------------|-------------|--------------------------------|
 | TX module **DATA**  | D1 (GPIO5)      | Pin 10      | any GPIO                       |
 | RX module **DATA**  | D2 (GPIO4)      | Pin 2       | **must be interrupt-capable**  |
-| TX/RX **VCC**       | VU (5V) or 3V3  | 5V          | TX range improves at 5V        |
-| TX/RX **GND**       | GND             | GND         |                                |
+| Module **VCC**      | 3V3 or VU       | 3.3V or 5V  | match the module family above  |
+| Module **GND**      | GND             | GND         |                                |
 | TX module antenna   | —               | —           | **solder a 17.3 cm wire**      |
 
 A few gotchas the modules don't tell you:
@@ -27,9 +34,10 @@ A few gotchas the modules don't tell you:
 - **The TX module is useless without an antenna.** Solder a 17.3 cm
   (¼-wavelength of 433 MHz) wire to the ANT pad. Without it you'll
   get maybe 10 cm of range and waste hours blaming software.
-- **The RX module wants 5V** for best sensitivity. The data pin is
-  ~5V logic but the SYN480R will work into a 3.3V MCU input on a
-  short bus. If you see garbage, use a divider or a 3.3V receiver.
+- **Don't mix 3.3 V and 5 V parts.** A 5 V MX-RM-5V receiver will
+  output ~5 V on its DATA line — fine for a 5 V-tolerant AVR input,
+  but it'll stress an ESP8266 / ESP32 GPIO. Use a divider, or just
+  use the 3.3 V SYN480R on 3.3 V MCUs.
 - **Interrupt-capable RX pin.** On AVR Uno that's pin 2 or 3
   (`INT0`/`INT1`). On ESP8266/ESP32 every GPIO except the strapping
   pins is fine.
