@@ -34,10 +34,14 @@ A few gotchas the modules don't tell you:
 - **The TX module is useless without an antenna.** Solder a 17.3 cm
   (¼-wavelength of 433 MHz) wire to the ANT pad. Without it you'll
   get maybe 10 cm of range and waste hours blaming software.
-- **Don't mix 3.3 V and 5 V parts.** A 5 V MX-RM-5V receiver will
-  output ~5 V on its DATA line — fine for a 5 V-tolerant AVR input,
-  but it'll stress an ESP8266 / ESP32 GPIO. Use a divider, or just
-  use the 3.3 V SYN480R on 3.3 V MCUs.
+- **Level-shift the DATA line whenever a 5 V MCU meets a 3.3 V module.**
+  An Arduino Uno's GPIO swings 0–5 V, but a SYN115's DATA input is
+  absolute-max ~3.6 V — drive it straight from a Uno pin and you'll
+  cook the module. Use a divider (e.g. 1 kΩ + 2 kΩ to GND) or any
+  level shifter on the DATA line going *into* a 3.3 V TX. The same
+  goes the other way: a 5 V MX-RM-5V receiver outputs ~5 V on its
+  DATA line, which stresses an ESP8266 / ESP32 GPIO — divide it
+  down, or use the 3.3 V SYN480R on 3.3 V MCUs.
 - **Interrupt-capable RX pin.** On AVR Uno that's pin 2 or 3
   (`INT0`/`INT1`). On ESP8266/ESP32 every GPIO except the strapping
   pins is fine.
